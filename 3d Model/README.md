@@ -2,7 +2,21 @@
 
 A fully parametric OpenSCAD enclosure for the ESP32 Sterzo steering controller. This design houses an ESP32 microcontroller and AS5600 magnetic rotation sensor to detect steering input from a bicycle wheel.
 
-Coming soon: Customizable 3d printable enclosure. Stay tuned! 🚀
+## Pre-Rendered STL Files
+
+Ready-to-print STL files are included with default settings optimized for 608 skateboard bearings, standard ESP32 dev boards, and AS5600 sensor modules:
+
+| File | Description | Quantity |
+|------|-------------|----------|
+| `Steering Controller Base.stl` | Main enclosure with sensor pocket and ESP32 cavity | 1 |
+| `Steering Controller Door.stl` | Removable bottom cover for ESP32 access | 1 |
+| `Steering Controller Rotating Top.stl` | Wheel cradle with bearing mounts and magnet holder | 1 |
+| `Steering Controller Bearing Rod.stl` | Retention rods that secure bearings in place | 4 |
+| `Steering Controller PETG Feet.stl` | Grip feet with textured bottom (print in TPU/PETG) | 4 |
+| `Fit Test - AS5600 Sensor.stl` | Test piece to verify sensor pocket fit | 1 |
+| `Fit Test - 608 Bearing.stl` | Test piece to verify bearing pocket and rod fit | 1 |
+
+**Recommended print order:** Fit test pieces first, then base, door, top, bearing rods, and optionally feet.
 
 ## Parts Overview
 
@@ -30,10 +44,10 @@ The model generates several printable parts controlled by the `render_part` para
 ## Key Parameters
 
 ### Main Dimensions
-- `base_diameter` - Overall diameter of the enclosure (default: 115mm)
-- `base_height` - Height of the base platform (default: 17mm)
-- `center_diameter` - Diameter of the raised center post (default: 50mm)
-- `center_height` - Additional height of center post above base (default: 8mm)
+- `base_diameter` - Overall diameter of the enclosure (default: 120mm)
+- `base_height` - Height of the base platform (default: 22mm)
+- `center_diameter` - Diameter of the raised center post (default: 65mm)
+- `center_height` - Additional height of center post above base (default: 10mm)
 
 ### AS5600 Sensor Pocket
 - `as5600_width` / `as5600_depth` - Actual measured board dimensions
@@ -48,19 +62,21 @@ The model generates several printable parts controlled by the `render_part` para
 - `esp32_offset_y` - Offset from center if needed
 
 ### Rotating Top
-- `top_height` - Total height of the rotating section
-- `top_wall_thickness` - Thickness of the wheel cradle walls
-- `wheel1_width` / `wheel1_depth` - Primary wheel slot dimensions
+- `top_height` - Total height of the rotating section (default: 62mm)
+- `top_wall_thickness` - Thickness of the wheel cradle walls (default: 18mm)
+- `wheel1_width` / `wheel1_depth` - Primary wheel slot dimensions (default: 30mm / 30mm)
+- `wheel2_width` / `wheel2_depth` - Secondary wheel slot dimensions (default: 50mm / 30mm)
 - `wheel2_enabled` - Enable perpendicular wheel slots for different wheel sizes
 
 ### Bearings
 - `bearings_enabled` - Toggle bearing system on/off
 - `bearing_count` - Number of bearings (3, 4, or 5)
-- `bearing_radius` - Distance from center to bearing position
-- `bearing_od` / `bearing_id` / `bearing_thickness` - Bearing dimensions (default: 608 skateboard bearings)
-- `bearing_pocket_clearance` - Extra space around bearing for free spinning (default: 1.0mm)
-- `bearing_stickout` - How far bearings extend below top piece (directly affects magnet gap!)
-- `bearing_rod_diameter` - Diameter of retention rods
+- `bearing_radius` - Distance from center to bearing position (default: 47mm)
+- `bearing_od` / `bearing_id` / `bearing_thickness` - Bearing dimensions (default: 608 skateboard bearings, 22/8/7mm)
+- `bearing_pocket_clearance` - Extra space around bearing for free spinning (default: 2.5mm)
+- `bearing_stickout` - How far bearings extend below top piece (default: 2.2mm, directly affects magnet gap!)
+- `bearing_rod_diameter` - Diameter of retention rods (default: 7.9mm for snug fit in 8mm bearing ID)
+- `bearing_rod_length` - Length of rod spanning across bearing (default: 20mm)
 - `bearing_rod_clearance` - Extra space around rod in slot (default: 0.3mm)
 
 ### Magnet and Sensor Gap
@@ -73,9 +89,9 @@ The AS5600 magnetic rotation sensor works best with a 2-3mm air gap between the 
 - **Actual magnet-sensor gap** = `bearing_stickout` + `magnet_air_gap`
 
 **Example with defaults:**
-- bearing_stickout = 3mm
+- bearing_stickout = 2.2mm
 - magnet_air_gap = 0mm
-- **Total gap = 3mm** (within optimal range)
+- **Total gap = 2.2mm** (within optimal 2-3mm range)
 
 **Parameters:**
 - `bearing_stickout` - How far bearings extend below top (set to desired gap if magnet_air_gap=0)
@@ -127,10 +143,10 @@ Recommended settings:
 ## Hardware Required
 
 - 1x ESP32 development board
-- 1x AS5600 magnetic rotation sensor module
-- 1x Diametrically magnetized magnet (sized to your parameters)
-- 3-5x 608 skateboard bearings (or adjust parameters for your bearings)
-- 4x M2/M2.5/M3 screws for door (selectable via `door_screw_size`)
+- 1x AS5600 magnetic rotation sensor module (23mm x 23mm typical)
+- 1x Diametrically magnetized magnet (default: 3mm diameter x 2mm height)
+- 4x 608 skateboard bearings (22mm OD x 8mm ID x 7mm thick)
+- 4x M2 screws for door (or M2.5/M3, selectable via `door_screw_size`)
 - 4x Rubber feet (optional) - either adhesive feet or print your own in TPU using render_part = 7
 - 1x 3mm LED (optional)
 

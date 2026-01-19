@@ -175,19 +175,27 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 - Try adjusting sensitivity setting
 - Verify no other magnets are nearby interfering with sensor
 
-## Building the Physical Mechanism
+## 3D Printable Enclosure
 
-The code handles the sensor input, but you'll need to build a physical mounting mechanism that:
+A fully parametric 3D printable enclosure is included in the [`3d Model/`](3d%20Model/) folder. The design features:
 
-1. Allows handlebars to rotate left/right
-2. Mounts the AS5600 sensor in a fixed position
-3. Attaches the magnet to the rotating handlebar shaft
-4. Keeps the magnet centered over the sensor at 2-3mm distance
+- **Base unit** housing the ESP32 and AS5600 sensor
+- **Rotating top** with wheel cradle that spins on skateboard bearings
+- **Magnetic sensing** via a magnet in the rotating top passing over the fixed sensor
+- Pre-rendered STL files ready to print, or customize using OpenSCAD
 
-Common approaches:
-- 3D printed handlebar mount with bearing
-- Modified bike stem with rotation mechanism
-- PVC pipe pivot mount
+**Included parts:**
+| File | Description |
+|------|-------------|
+| `Steering Controller Base.stl` | Main enclosure with sensor and ESP32 pockets |
+| `Steering Controller Door.stl` | Removable cover for ESP32 access |
+| `Steering Controller Rotating Top.stl` | Wheel cradle with bearing mounts |
+| `Steering Controller Bearing Rod.stl` | Retention rods for bearings (print 4x) |
+| `Steering Controller PETG Feet.stl` | Optional grip feet (print in TPU/PETG) |
+
+**Fit test pieces** are also included to verify clearances before printing full parts.
+
+See the [3D Model README](3d%20Model/README.md) for detailed instructions, parameters, and printing tips.
 
 ## How It Works
 
