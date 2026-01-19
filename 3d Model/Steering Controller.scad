@@ -4,13 +4,13 @@
 
 /* [Main Dimensions] */
 // Base diameter
-base_diameter = 115;
+base_diameter = 120;
 // Base height (not including center post)
-base_height = 17;
+base_height = 22;
 // Center post diameter
-center_diameter = 50;
+center_diameter = 65;
 // Center post additional height
-center_height = 8;
+center_height = 10;
 // Total height = base_height + center_height = 23mm
 
 /* [AS5600 Sensor Pocket] */
@@ -46,7 +46,7 @@ esp32_width = 60;
 // ESP32 pocket depth
 esp32_depth = 35;
 // ESP32 pocket height (from bottom)
-esp32_pocket_height = 14;
+esp32_pocket_height = 17;
 // ESP32 pocket offset from center (0 = centered below AS5600 opening)
 esp32_offset_y = 0;
 
@@ -80,9 +80,9 @@ rubber_feet_enabled = true;
 // Rubber foot diameter
 rubber_foot_diameter = 10;
 // Rubber foot recess depth (how deep the foot sits in the base)
-rubber_foot_depth = 1;
+rubber_foot_depth = 3;
 // Rubber foot total height (for printable feet)
-rubber_foot_height = 3; // [1:0.5:10]
+rubber_foot_height = 5; // [1:0.5:10]
 // Rubber foot clearance (subtracted from diameter for fit)
 rubber_foot_clearance = 0.3;
 // Rubber foot distance from center
@@ -94,11 +94,11 @@ rubber_foot_count = 4;
 // Enable USB-C cable hole
 usb_enabled = true;
 // USB-C hole width
-usb_width = 6;
+usb_width = 7;
 // USB-C hole height
 usb_height = 12;
 // USB-C hole center height from bottom (outside)
-usb_center_height = 8;
+usb_center_height = 6;
 // USB-C hole angular position (degrees, 0 = front)
 usb_angle = 0;
 
@@ -108,9 +108,9 @@ led_enabled = true;
 // LED lens diameter (front opening)
 led_lens_diameter = 3;
 // LED body diameter (back opening for wires)
-led_body_diameter = 4;
+led_body_diameter = 5;
 // LED lens depth (how far the 3mm section extends)
-led_lens_depth = 3;
+led_lens_depth = 2;
 // LED hole center height from bottom (outside)
 led_center_height = 5;
 // LED hole angular position (degrees, 180 = opposite USB)
@@ -140,7 +140,7 @@ tilt_direction = 0;
 
 /* [Rotating Top - Main] */
 // Top total height
-top_height = 50;
+top_height = 62;
 // Top wall thickness (also determines floor thickness above bearing pockets)
 // Must be thick enough that bearing_pocket_depth doesn't cut through floor
 top_wall_thickness = 18;
@@ -151,7 +151,7 @@ top_recess_clearance = 1;
 // Wheel 1 slot width (tire width + clearance)
 wheel1_width = 30;
 // Wheel 1 slot depth (how far DOWN from top the cutout extends)
-wheel1_depth = 23;
+wheel1_depth = 30;
 
 /* [Rotating Top - Wheel 2 (Left/Right)] */
 // Enable second wheel position (for different wheel sizes)
@@ -159,13 +159,13 @@ wheel2_enabled = true;
 // Wheel 2 slot width (tire width + clearance)
 wheel2_width = 50;
 // Wheel 2 slot depth (how far DOWN from top the cutout extends)
-wheel2_depth = 25;
+wheel2_depth = 30;
 
 /* [Rotating Top - Magnet] */
 // Magnet diameter
-magnet_diameter = 2;
+magnet_diameter = 3;
 // Magnet height/thickness
-magnet_height = 1;
+magnet_height = 2;
 // Magnet pocket extra clearance
 magnet_clearance = 0.2;
 // IMPORTANT: The actual magnet-to-sensor gap = bearing_stickout + magnet_air_gap
@@ -186,24 +186,22 @@ bearing_id = 8;
 // Bearing thickness (608 skateboard = 7mm)
 bearing_thickness = 7;
 // Bearing pocket clearance (extra space around bearing for free spinning)
-bearing_pocket_clearance = 1.0; // [0:0.1:5]
+bearing_pocket_clearance = 2.5; // [0:0.1:5]
 // Bearing stickout (how far bearing extends below top piece - directly affects magnet gap!)
 // For AS5600, aim for 2-3mm total gap. If magnet_air_gap=0, set stickout to desired gap.
-bearing_stickout = 3; // [0:0.1:10]
+bearing_stickout = 2.2; // [0:0.1:10]
 // Bearing distance from center (should be in the track area)
-bearing_radius = 40;
+bearing_radius = 47;
 // Rod diameter for bearing retention
 bearing_rod_diameter = 8;
 // Rod clearance (extra space around rod in slot)
 bearing_rod_clearance = 0.3;
-// Rod slot length (horizontal part of cross for locking)
-bearing_rod_slot_length = 12;
-// Bearing rod length (length of rod that goes through bearing)
+// Bearing rod length (length of rod that spans across bearing)
 bearing_rod_length = 20;
 
 /* [Rendering] */
 // What to render
-render_part = 0; // [0:Base, 1:Door, 2:Top, 3:All Preview, 4:Bearing Rod, 5:AS5600 Fit Test, 6:Bearing Fit Test, 7:Rubber Feet]
+render_part = 2; // [0:Base, 1:Door, 2:Top, 3:All Preview, 4:Bearing Rod, 5:AS5600 Fit Test, 6:Bearing Fit Test, 7:Rubber Feet]
 $fn = 100;
 
 // Calculate wall thickness at edge
@@ -684,7 +682,7 @@ module bearing_pockets() {
 // Rod arm: RADIAL direction (toward/away from center) - SHALLOWER, rod rests on ledge here
 module bearing_pocket() {
     rod_d = bearing_rod_diameter + bearing_rod_clearance;
-    half_slot = bearing_rod_slot_length / 2;
+    rod_l = bearing_rod_length + bearing_rod_clearance;
 
     // Bearing pocket dimensions
     pocket_width = bearing_od + bearing_pocket_clearance;
@@ -699,8 +697,9 @@ module bearing_pocket() {
 
     // ROD ARM of + (RADIAL direction, toward/away from center) - SHALLOWER
     // The floor creates a ledge that holds the rod/bearing in position
-    translate([-half_slot - rod_d/2, -rod_d/2, -0.01])
-        cube([bearing_rod_slot_length + rod_d, rod_d, rod_ledge_depth + 0.02]);
+    // X = rod length, Y = rod diameter
+    translate([-rod_l/2, -rod_d/2, -0.01])
+        cube([rod_l, rod_d, rod_ledge_depth + 0.02]);
 }
 
 // Solid wedge to fill underneath the tilted base
@@ -852,26 +851,25 @@ module bearing_fit_test() {
     wall = 3;
 
     rod_d = bearing_rod_diameter + bearing_rod_clearance;
-    half_slot = bearing_rod_slot_length / 2;
+    rod_l = bearing_rod_length + bearing_rod_clearance;
 
-    // Calculate extents of all cutouts
-    bearing_min_x = -bearing_od/2 - bearing_pocket_clearance/2;
-    bearing_max_x = bearing_od/2 + bearing_pocket_clearance/2;
+    // Bearing arm: X is thickness (narrow), Y is OD (wide)
+    bearing_arm_x_extent = (bearing_thickness + bearing_pocket_clearance) / 2;  // ±4
+    bearing_arm_y_extent = (bearing_od + bearing_pocket_clearance) / 2;         // ±11.5
 
-    // Rod slot extends half_slot + rod_d/2 in each direction
-    rod_extent = half_slot + rod_d/2;
+    // Rod arm: X is length (wide), Y is diameter (narrow)
+    rod_arm_x_extent = rod_l / 2;   // ±10.15
+    rod_arm_y_extent = rod_d / 2;   // ±4.15
 
-    // Bearing thickness extent
-    bearing_y_extent = (bearing_thickness + bearing_pocket_clearance) / 2;
-
-    // Use the larger of rod slot or bearing thickness for Y
-    max_y = max(rod_extent, bearing_y_extent);
+    // Test piece needs to contain both arms
+    max_x_extent = max(bearing_arm_x_extent, rod_arm_x_extent);  // 10.15
+    max_y_extent = max(bearing_arm_y_extent, rod_arm_y_extent);  // 11.5
 
     // Test piece dimensions with walls on all sides
-    min_x = bearing_min_x - wall;
-    max_x = max(bearing_max_x, rod_extent) + wall;
-    min_y = -max_y - wall;
-    max_y_dim = max_y + wall;
+    min_x = -max_x_extent - wall;
+    max_x = max_x_extent + wall;
+    min_y = -max_y_extent - wall;
+    max_y_dim = max_y_extent + wall;
 
     test_width = max_x - min_x;
     test_depth = max_y_dim - min_y;
@@ -886,12 +884,12 @@ module bearing_fit_test() {
             cube([test_width, test_depth, test_height]);
 
         // BEARING ARM of + (TANGENT direction) - DEEPER
-        translate([-bearing_y_extent, bearing_min_x, -0.01])
+        translate([-bearing_arm_x_extent, -bearing_arm_y_extent, -0.01])
             cube([bearing_thickness + bearing_pocket_clearance, bearing_od + bearing_pocket_clearance, bearing_pocket_depth + 0.01]);
 
         // ROD ARM of + (RADIAL direction) - SHALLOWER, creates ledge for rod
-        translate([-half_slot - rod_d/2, -rod_d/2, -0.01])
-            cube([bearing_rod_slot_length + rod_d, rod_d, rod_ledge_depth + 0.02]);
+        translate([-rod_l/2, -rod_d/2, -0.01])
+            cube([rod_l, rod_d, rod_ledge_depth + 0.02]);
     }
 }
 
