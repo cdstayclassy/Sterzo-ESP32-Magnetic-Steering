@@ -218,3 +218,7 @@ The AS5600 sensor uses a magnet's magnetic field to determine angular position w
 ## Issues & Contributions
 
 Feel free to raise an issue if you encounter problems or have suggestions for improvements!
+
+## License
+
+This project is licensed under [CC BY-NC-SA 4.0](LICENSE) - you are free to use, share, and adapt for personal, non-commercial purposes. See the LICENSE file for details.

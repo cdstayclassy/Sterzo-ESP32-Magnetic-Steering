@@ -158,4 +158,4 @@ Open `Steering Controller.scad` in OpenSCAD and use the Customizer panel (View >
 
 ## License
 
-See the main project repository for license information.
+This project is licensed under [CC BY-NC-SA 4.0](../LICENSE) - free for personal use, no commercial use permitted.
