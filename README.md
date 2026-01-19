@@ -1,10 +1,6 @@
-# Build your own bike trainer steering device with AS5600 magnetic sensor!
+# Build your own bike trainer steering device with an ESP32 and AS5600 magnetic sensor!
 
-A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo steering device. This project, built using an ESP32 and AS5600 magnetic rotary position sensor, allows you to add realistic steering control to your indoor cycling experience using a rotating handlebar mechanism with magnetic angle detection.
-
-Original code forked from stefaandesmet2003/ESP32Sterzo (youtube video: https://youtu.be/6pxeI_YN5Yk)
-
-**Update 01/2026**: Converted from touch buttons in the forked project to AS5600 magnetic rotary sensor for smooth, continuous steering control.
+A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo steering device. This project, built using an ESP32 and AS5600 magnetic rotary position sensor using the Sterzo protocol, allows you to add realistic steering control to your indoor cycling experience using a rotating handlebar mechanism with magnetic angle detection.
 
 ## Features
 
@@ -31,7 +27,7 @@ Original code forked from stefaandesmet2003/ESP32Sterzo (youtube video: https://
 
 **Optional:**
 - **3-5mm LED and 220Ω resistor** (any color) - for status indication
-- **Momentary push button** - for recenter function (mount on handlebars)
+- **Momentary push button** - for recenter function
 
 ## Wiring Connections
 
@@ -218,6 +214,11 @@ The AS5600 sensor uses a magnet's magnetic field to determine angular position w
 ## Issues & Contributions
 
 Feel free to raise an issue if you encounter problems or have suggestions for improvements!
+
+## Acknowledgments
+
+- **Original ESP32 Sterzo code** by [stefaandesmet2003](https://github.com/stefaandesmet2003/ESP32Sterzo) ([YouTube video](https://youtu.be/6pxeI_YN5Yk)) - BLE steering protocol implementation that this project was forked from, converted from touch buttons to AS5600 magnetic sensor
+- **3D enclosure inspiration** from [ESP32 Sterzo Steering Simulator](https://www.thingiverse.com/thing:4239532) by dattepp on Thingiverse
 
 ## License
 
