@@ -193,7 +193,7 @@ bearing_stickout = 2.2; // [0:0.1:10]
 // Bearing distance from center (should be in the track area)
 bearing_radius = 47;
 // Rod diameter for bearing retention
-bearing_rod_diameter = 8;
+bearing_rod_diameter = 7.9;
 // Rod clearance (extra space around rod in slot)
 bearing_rod_clearance = 0.3;
 // Bearing rod length (length of rod that spans across bearing)
