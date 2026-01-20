@@ -21,7 +21,7 @@
                   ┌─────────┐
                   │         │
 AS5600 SDA ──────►│ GPIO21  │ (I2C Data)
-AS5600 SCL ──────►│ GPIO22  │ (I2C Clock)
+AS5600 SCL ──────►│ GPIO19  │ (I2C Clock)
 AS5600 VCC ──────►│ 3.3V    │
 AS5600 GND ──────►│ GND     │
                   │         │
@@ -44,7 +44,7 @@ USB-C ───────────►│ USB     │ (Power/Programming)
 | VCC        | 3.3V      | Power supply (NOT 5V!) |
 | GND        | GND       | Ground |
 | SDA        | GPIO 21   | I2C Data line |
-| SCL        | GPIO 22   | I2C Clock line |
+| SCL        | GPIO 19   | I2C Clock line (ESP32 Mini compatible) |
 
 **Note:** Some AS5600 modules have additional pins (DIR, PGO, OUT) - these are not used and can be left unconnected.
 
@@ -88,7 +88,7 @@ USB-C ───────────►│ USB     │ (Power/Programming)
 
 **b) I2C connections:**
 3. Connect AS5600 **SDA** to ESP32 **GPIO 21** (yellow/green wire)
-4. Connect AS5600 **SCL** to ESP32 **GPIO 22** (orange/blue wire)
+4. Connect AS5600 **SCL** to ESP32 **GPIO 19** (orange/blue wire)
 
 ### 3. Connect External LED (Optional)
 
@@ -125,7 +125,7 @@ Before powering on, verify:
 - [ ] AS5600 VCC → ESP32 3.3V (NOT 5V!)
 - [ ] AS5600 GND → ESP32 GND
 - [ ] AS5600 SDA → ESP32 GPIO 21
-- [ ] AS5600 SCL → ESP32 GPIO 22
+- [ ] AS5600 SCL → ESP32 GPIO 19
 - [ ] (If using LED) LED has 220Ω resistor in series
 - [ ] (If using LED) LED polarity is correct (long leg to GPIO 2)
 - [ ] (If using button) Button connected between GPIO 4 and GND
@@ -164,7 +164,7 @@ Before powering on, verify:
 
 | LED Behavior | Meaning | Fix |
 |--------------|---------|-----|
-| 3 fast flashes, pause, repeat | Sensor not found | Check I2C wiring (SDA→GPIO21, SCL→GPIO22) |
+| 3 fast flashes, pause, repeat | Sensor not found | Check I2C wiring (SDA→GPIO21, SCL→GPIO19) |
 | 4 fast flashes, pause, repeat | Magnet not detected | Check magnet placement over sensor |
 
 ## GPIO Pin Information
@@ -178,28 +178,35 @@ GPIO 2 is chosen because:
 - ✅ Not used for I2C or other critical functions
 - ✅ Accessible on most ESP32 dev boards
 
-### Why NOT GPIO 21/22?
+### Why NOT GPIO 19/21?
 
-GPIO 21 and GPIO 22 are reserved for I2C communication with the AS5600 sensor and **cannot** be used for LED.
+GPIO 19 and GPIO 21 are reserved for I2C communication with the AS5600 sensor and **cannot** be used for LED.
 
 ### Alternative Pins (Advanced)
 
 If default pins are already in use, you can use these alternatives:
-- GPIO 5, 12, 13, 14, 15, 16, 17, 18, 19, 23, 25, 26, 27, 32, 33
+- GPIO 5, 12, 13, 14, 15, 16, 17, 18, 22, 23, 25, 26, 27, 32, 33
 
 **To change LED pin:**
-Edit line 22 in `ESP32Sterzo.ino`:
+Edit in `ESP32Sterzo.ino`:
 ```cpp
 #define EXTERNAL_LED_PIN 2  // Change to your desired GPIO number
 ```
 
 **To change button pin:**
-Edit line 23 in `ESP32Sterzo.ino`:
+Edit in `ESP32Sterzo.ino`:
 ```cpp
 #define CENTER_BUTTON_PIN 4  // Change to your desired GPIO number
 ```
 
-**Don't use:** GPIO 21, 22 (I2C), GPIO 0, 1, 3 (boot/serial)
+**To change I2C pins:**
+Edit in `ESP32Sterzo.ino`:
+```cpp
+#define I2C_SDA_PIN 21  // Change to your desired GPIO number
+#define I2C_SCL_PIN 19  // Change to your desired GPIO number
+```
+
+**Don't use:** GPIO 19, 21 (I2C), GPIO 0, 1, 3 (boot/serial)
 
 ## Troubleshooting
 
@@ -219,7 +226,7 @@ Edit line 23 in `ESP32Sterzo.ino`:
 
 ### AS5600 not detected
 - Check VCC is connected to 3.3V (NOT 5V!)
-- Check SDA/SCL wires not swapped
+- Check SDA→GPIO21 and SCL→GPIO19 (not swapped)
 - Check I2C address (should be 0x36)
 - Try different jumper wires
 

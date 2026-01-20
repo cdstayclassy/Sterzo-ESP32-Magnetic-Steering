@@ -37,8 +37,8 @@ A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo stee
 |------------|-----------|-------------|
 | VCC | 3.3V | Power supply (use 3.3V, NOT 5V) |
 | GND | GND | Ground |
-| SDA | GPIO 21 | I2C Data (default) |
-| SCL | GPIO 22 | I2C Clock (default) |
+| SDA | GPIO 21 | I2C Data |
+| SCL | GPIO 19 | I2C Clock (compatible with ESP32 Mini) |
 
 ### External LED - OPTIONAL (Status Indicator)
 
@@ -58,7 +58,7 @@ A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo stee
 
 ```
 AS5600 SDA  → ESP32 GPIO 21
-AS5600 SCL  → ESP32 GPIO 22
+AS5600 SCL  → ESP32 GPIO 19
 AS5600 VCC  → ESP32 3.3V
 AS5600 GND  → ESP32 GND
 
@@ -120,6 +120,8 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 // Pin definitions
 #define EXTERNAL_LED_PIN 2   // GPIO for status LED
 #define CENTER_BUTTON_PIN 4  // GPIO for recenter button
+#define I2C_SDA_PIN 21       // GPIO for I2C SDA (AS5600 data)
+#define I2C_SCL_PIN 19       // GPIO for I2C SCL (AS5600 clock)
 
 // Device configuration
 #define BLE_DEVICE_NAME "ESP32 Steering"  // Bluetooth device name shown to apps
@@ -136,6 +138,8 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 |---------|-------------|--------------|
 | `EXTERNAL_LED_PIN` | GPIO pin for status LED | Using a different pin |
 | `CENTER_BUTTON_PIN` | GPIO pin for recenter button | Using a different pin |
+| `I2C_SDA_PIN` | GPIO pin for AS5600 I2C data | Using a different pin |
+| `I2C_SCL_PIN` | GPIO pin for AS5600 I2C clock | Using a different pin (default 19 for ESP32 Mini compatibility) |
 | `BLE_DEVICE_NAME` | Name shown in Zwift/GTBikeV pairing | You want a custom name |
 | `STEERING_DEAD_ZONE` | Degrees near center that report as straight | Hard to ride straight (increase) or feels unresponsive (decrease) |
 | `STEERING_SENSITIVITY` | How much physical rotation for full steering | Too twitchy (increase) or too sluggish (decrease) |
@@ -155,8 +159,8 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 ## Troubleshooting
 
 **AS5600 sensor not detected:**
-- Check I2C wiring connections (SDA to GPIO 21, SCL to GPIO 22)
-- Verify the sensor has power (3.3V or 5V)
+- Check I2C wiring connections (SDA to GPIO 21, SCL to GPIO 19)
+- Verify the sensor has power (3.3V)
 - Ensure magnet is positioned 2-3mm above the sensor
 - Check Serial Monitor for error messages
 

@@ -1,6 +1,6 @@
 /*
  * Hook up an AS5600 magnetic rotary position sensor to ESP32 via I2C
- * AS5600 connections: SDA to GPIO 21, SCL to GPIO 22 (default ESP32 I2C pins)
+ * AS5600 connections: SDA to GPIO 21, SCL to GPIO 19 (compatible with ESP32 Mini)
  * Place magnet on rotating shaft - sensor reads angle from 0-360°
  * Standard settings for ESP32 are used for compile & download
  * The steering angle is mapped from sensor rotation and notified to Zwift
@@ -21,6 +21,8 @@
 // Pin definitions
 #define EXTERNAL_LED_PIN 2   // GPIO 2 for external status LED
 #define CENTER_BUTTON_PIN 4  // GPIO 4 for recenter button (connect button between pin and GND)
+#define I2C_SDA_PIN 21       // GPIO 21 for I2C SDA (AS5600 data)
+#define I2C_SCL_PIN 19       // GPIO 19 for I2C SCL (AS5600 clock) - compatible with ESP32 Mini
 
 // Device configuration
 #define BLE_DEVICE_NAME "ESP32 Steering"  // Bluetooth device name shown to apps
@@ -205,8 +207,8 @@ void setup() {
   // Initialize recenter button (uses internal pullup, button connects to GND)
   pinMode(CENTER_BUTTON_PIN, INPUT_PULLUP);
 
-  // Initialize I2C for AS5600
-  Wire.begin();
+  // Initialize I2C for AS5600 with explicit pins (compatible with ESP32 Mini)
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   Serial.println("I2C initialized");
 
   // Try initialization without direction pin first

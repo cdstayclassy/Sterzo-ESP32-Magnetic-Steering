@@ -6,7 +6,7 @@
 // Base diameter
 base_diameter = 120;
 // Base height (not including center post)
-base_height = 22;
+base_height = 24;
 // Center post diameter
 center_diameter = 65;
 // Center post additional height
@@ -34,9 +34,9 @@ as5600_peg_diameter = 2.8; // [1:0.1:5]
 // Peg height above pocket floor (negative = recessed below floor)
 as5600_peg_height = 3; // [-5:0.1:10]
 // Peg spacing X (distance between peg centers, left to right)
-as5600_peg_spacing_x = 15.4; // [1:0.1:30]
+as5600_peg_spacing_x = 15.5; // [1:0.1:30]
 // Peg spacing Y (distance between peg centers, front to back)
-as5600_peg_spacing_y = 15.4; // [1:0.1:30]
+as5600_peg_spacing_y = 15.5; // [1:0.1:30]
 
 /* [ESP32 Pocket (Bottom)] */
 // ESP32 pocket enabled
@@ -44,7 +44,7 @@ esp32_enabled = true;
 // ESP32 pocket width
 esp32_width = 60;
 // ESP32 pocket depth
-esp32_depth = 35;
+esp32_depth = 45;
 // ESP32 pocket height (from bottom)
 esp32_pocket_height = 17;
 // ESP32 pocket offset from center (0 = centered below AS5600 opening)
@@ -54,7 +54,7 @@ esp32_offset_y = 0;
 // Door thickness
 door_thickness = 2;
 // Door clearance (gap between door and pocket walls)
-door_clearance = 0.3;
+door_clearance = 0.6;
 // Door corner radius (should match pocket)
 door_corner_radius = 3;
 // Screw size (0=M2, 1=M2.5, 2=M3)
@@ -201,7 +201,7 @@ bearing_rod_length = 20;
 
 /* [Rendering] */
 // What to render
-render_part = 2; // [0:Base, 1:Door, 2:Top, 3:All Preview, 4:Bearing Rod, 5:AS5600 Fit Test, 6:Bearing Fit Test, 7:Rubber Feet]
+render_part = 0; // [0:Base, 1:Door, 2:Top, 3:All Preview, 4:Bearing Rod, 5:AS5600 Fit Test, 6:Bearing Fit Test, 7:Rubber Feet]
 $fn = 100;
 
 // Calculate wall thickness at edge
@@ -682,7 +682,7 @@ module bearing_pockets() {
 // Rod arm: RADIAL direction (toward/away from center) - SHALLOWER, rod rests on ledge here
 module bearing_pocket() {
     rod_d = bearing_rod_diameter + bearing_rod_clearance;
-    rod_l = bearing_rod_length + bearing_rod_clearance;
+    rod_l = bearing_rod_length + bearing_rod_clearance * 2;  // Extra clearance for end-to-end fit
 
     // Bearing pocket dimensions
     pocket_width = bearing_od + bearing_pocket_clearance;
@@ -851,7 +851,7 @@ module bearing_fit_test() {
     wall = 3;
 
     rod_d = bearing_rod_diameter + bearing_rod_clearance;
-    rod_l = bearing_rod_length + bearing_rod_clearance;
+    rod_l = bearing_rod_length + bearing_rod_clearance * 2;  // Extra clearance for end-to-end fit
 
     // Bearing arm: X is thickness (narrow), Y is OD (wide)
     bearing_arm_x_extent = (bearing_thickness + bearing_pocket_clearance) / 2;  // ±4
