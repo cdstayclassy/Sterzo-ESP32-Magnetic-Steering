@@ -1,6 +1,6 @@
 /*
  * Hook up an AS5600 magnetic rotary position sensor to ESP32 via I2C
- * AS5600 connections: SDA to GPIO 21, SCL to GPIO 19 (compatible with ESP32 Mini)
+ * AS5600 connections: SDA to GPIO 21, SCL to GPIO 20 (compatible with ESP32 Mini)
  * Place magnet on rotating shaft - sensor reads angle from 0-360°
  * Standard settings for ESP32 are used for compile & download
  * The steering angle is mapped from sensor rotation and notified to Zwift
@@ -22,7 +22,14 @@
 #define EXTERNAL_LED_PIN 2   // GPIO 2 for external status LED
 #define CENTER_BUTTON_PIN 4  // GPIO 4 for recenter button (connect button between pin and GND)
 #define I2C_SDA_PIN 21       // GPIO 21 for I2C SDA (AS5600 data)
-#define I2C_SCL_PIN 19       // GPIO 19 for I2C SCL (AS5600 clock) - compatible with ESP32 Mini
+#define I2C_SCL_PIN 20       // GPIO 20 for I2C SCL (AS5600 clock) - compatible with ESP32 Mini
+
+// LED configuration
+#define LED_ACTIVE_LOW false // Set to true for ESP32-C3 onboard LED (inverts HIGH/LOW logic)
+
+// Helper macro for LED state (inverts if active-low)
+#define LED_ON  (LED_ACTIVE_LOW ? LOW : HIGH)
+#define LED_OFF (LED_ACTIVE_LOW ? HIGH : LOW)
 
 // Device configuration
 #define BLE_DEVICE_NAME "ESP32 Steering"  // Bluetooth device name shown to apps
@@ -201,8 +208,8 @@ void setup() {
   // Initialize LEDs
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(EXTERNAL_LED_PIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  digitalWrite(EXTERNAL_LED_PIN, HIGH);  // Turn on external LED during startup
+  digitalWrite(LED_BUILTIN, LED_ON);
+  digitalWrite(EXTERNAL_LED_PIN, LED_ON);  // Turn on external LED during startup
 
   // Initialize recenter button (uses internal pullup, button connects to GND)
   pinMode(CENTER_BUTTON_PIN, INPUT_PULLUP);
@@ -376,15 +383,15 @@ void loop() {
       // During flash sequence (100ms on, 100ms off per flash)
       if (elapsed > 100) {
         errorFlashState = !errorFlashState;
-        digitalWrite(LED_BUILTIN, errorFlashState);
-        digitalWrite(EXTERNAL_LED_PIN, errorFlashState);
+        digitalWrite(LED_BUILTIN, errorFlashState ? LED_ON : LED_OFF);
+        digitalWrite(EXTERNAL_LED_PIN, errorFlashState ? LED_ON : LED_OFF);
         errorFlashMillis = millis();
         errorFlashCount++;
       }
     } else {
       // Pause after flashes (1500ms)
-      digitalWrite(LED_BUILTIN, LOW);
-      digitalWrite(EXTERNAL_LED_PIN, LOW);
+      digitalWrite(LED_BUILTIN, LED_OFF);
+      digitalWrite(EXTERNAL_LED_PIN, LED_OFF);
       if (elapsed > 1500) {
         inErrorFlashSequence = false;  // Restart sequence
       }
@@ -398,9 +405,10 @@ void loop() {
       blinkInterval = 500;
     }
     if ((millis() - blinkMillis) > blinkInterval) {
-      bool ledState = !digitalRead(LED_BUILTIN);
-      digitalWrite(LED_BUILTIN, ledState);
-      digitalWrite(EXTERNAL_LED_PIN, ledState);  // Mirror state to external LED
+      static bool blinkState = false;
+      blinkState = !blinkState;
+      digitalWrite(LED_BUILTIN, blinkState ? LED_ON : LED_OFF);
+      digitalWrite(EXTERNAL_LED_PIN, blinkState ? LED_ON : LED_OFF);
       blinkMillis = millis();
     }
   }
@@ -418,11 +426,11 @@ void loop() {
 
       // Visual feedback: 2 quick flashes
       for (int i = 0; i < 2; i++) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        digitalWrite(EXTERNAL_LED_PIN, HIGH);
+        digitalWrite(LED_BUILTIN, LED_ON);
+        digitalWrite(EXTERNAL_LED_PIN, LED_ON);
         delay(100);
-        digitalWrite(LED_BUILTIN, LOW);
-        digitalWrite(EXTERNAL_LED_PIN, LOW);
+        digitalWrite(LED_BUILTIN, LED_OFF);
+        digitalWrite(EXTERNAL_LED_PIN, LED_OFF);
         delay(100);
       }
     }

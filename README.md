@@ -38,7 +38,7 @@ A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo stee
 | VCC | 3.3V | Power supply (use 3.3V, NOT 5V) |
 | GND | GND | Ground |
 | SDA | GPIO 21 | I2C Data |
-| SCL | GPIO 19 | I2C Clock (compatible with ESP32 Mini) |
+| SCL | GPIO 20 | I2C Clock (compatible with ESP32 Mini) |
 
 ### External LED - OPTIONAL (Status Indicator)
 
@@ -58,7 +58,7 @@ A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo stee
 
 ```
 AS5600 SDA  → ESP32 GPIO 21
-AS5600 SCL  → ESP32 GPIO 19
+AS5600 SCL  → ESP32 GPIO 20
 AS5600 VCC  → ESP32 3.3V
 AS5600 GND  → ESP32 GND
 
@@ -121,15 +121,18 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 #define EXTERNAL_LED_PIN 2   // GPIO for status LED
 #define CENTER_BUTTON_PIN 4  // GPIO for recenter button
 #define I2C_SDA_PIN 21       // GPIO for I2C SDA (AS5600 data)
-#define I2C_SCL_PIN 19       // GPIO for I2C SCL (AS5600 clock)
+#define I2C_SCL_PIN 20       // GPIO for I2C SCL (AS5600 clock)
+
+// LED configuration
+#define LED_ACTIVE_LOW false // Set to true for ESP32-C3 onboard LED (inverts HIGH/LOW logic)
 
 // Device configuration
 #define BLE_DEVICE_NAME "ESP32 Steering"  // Bluetooth device name shown to apps
 
 // Steering configuration
-#define STEERING_DEAD_ZONE 2.0      // Degrees from center that count as "straight"
-#define STEERING_SENSITIVITY 750.0  // Raw sensor units for full steering range
-#define STEERING_UPDATE_MS 67       // Milliseconds between BLE updates
+#define STEERING_DEAD_ZONE 1.0      // Degrees from center that count as "straight"
+#define STEERING_SENSITIVITY 768.0  // Raw sensor units for full steering range
+#define STEERING_UPDATE_MS 60       // Milliseconds between BLE updates
 ```
 
 ### Settings explained:
@@ -139,7 +142,8 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 | `EXTERNAL_LED_PIN` | GPIO pin for status LED | Using a different pin |
 | `CENTER_BUTTON_PIN` | GPIO pin for recenter button | Using a different pin |
 | `I2C_SDA_PIN` | GPIO pin for AS5600 I2C data | Using a different pin |
-| `I2C_SCL_PIN` | GPIO pin for AS5600 I2C clock | Using a different pin (default 19 for ESP32 Mini compatibility) |
+| `I2C_SCL_PIN` | GPIO pin for AS5600 I2C clock | Using a different pin (default 20 for ESP32 Mini compatibility) |
+| `LED_ACTIVE_LOW` | Inverts LED HIGH/LOW logic | Using an ESP32-C3 Super Mini (onboard LED is active-low) |
 | `BLE_DEVICE_NAME` | Name shown in Zwift/GTBikeV pairing | You want a custom name |
 | `STEERING_DEAD_ZONE` | Degrees near center that report as straight | Hard to ride straight (increase) or feels unresponsive (decrease) |
 | `STEERING_SENSITIVITY` | How much physical rotation for full steering | Too twitchy (increase) or too sluggish (decrease) |
@@ -147,19 +151,19 @@ All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
 
 ### Sensitivity examples:
 - `512` = ~45° physical rotation for full ±40° steering (very sensitive)
-- `750` = ~66° physical rotation for full ±40° steering (moderate)
+- `768` = ~68° physical rotation for full ±40° steering (moderate)
 - `1024` = ~90° physical rotation for full ±40° steering (less sensitive)
 
 ### Update rate examples:
 - `50` = 20 updates/sec (very responsive)
-- `67` = 15 updates/sec (smooth)
+- `60` = ~17 updates/sec (smooth)
 - `100` = 10 updates/sec (responsive)
 - `1000` = 1 update/sec (laggy)
 
 ## Troubleshooting
 
 **AS5600 sensor not detected:**
-- Check I2C wiring connections (SDA to GPIO 21, SCL to GPIO 19)
+- Check I2C wiring connections (SDA to GPIO 21, SCL to GPIO 20)
 - Verify the sensor has power (3.3V)
 - Ensure magnet is positioned 2-3mm above the sensor
 - Check Serial Monitor for error messages
@@ -191,7 +195,7 @@ A fully parametric 3D printable enclosure is included in the [`3d Model/`](3d%20
 | `Steering Controller Door.stl` | Removable cover for ESP32 access |
 | `Steering Controller Rotating Top.stl` | Wheel cradle with bearing mounts |
 | `Steering Controller Bearing Rod.stl` | Retention rods for bearings (print 4x) |
-| `Steering Controller PETG Feet.stl` | Optional grip feet (print in TPU/PETG) |
+| `Steering Controller Rubber Foot.stl` | Optional grip foot (print 4x in TPU) |
 
 **Fit test pieces** are also included to verify clearances before printing full parts.
 
@@ -211,7 +215,7 @@ The AS5600 sensor uses a magnet's magnetic field to determine angular position w
 
 - **BLE Service UUID**: `347b0001-7635-408b-8918-8ff3949ce592`
 - **Steering angle characteristic**: `347b0030-7635-408b-8918-8ff3949ce592`
-- **Update rate**: Configurable (default: 15 Hz / 67ms)
+- **Update rate**: Configurable (default: ~17 Hz / 60ms)
 - **Steering range**: ±40° (Zwift standard)
 - **Sensor resolution**: 0.087° (12-bit, 4096 positions)
 

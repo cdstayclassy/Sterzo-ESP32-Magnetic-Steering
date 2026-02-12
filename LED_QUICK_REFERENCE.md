@@ -32,11 +32,18 @@ ESP32 GPIO 2 ──[220Ω resistor]──►|──── ESP32 GND
 ✅ **The code already supports this!**
 
 The LED functionality is built into `ESP32Sterzo.ino`:
-- Line 22: `#define EXTERNAL_LED_PIN 2`
-- Line 177: `pinMode(EXTERNAL_LED_PIN, OUTPUT);`
-- Line 291: `digitalWrite(EXTERNAL_LED_PIN, ledState);`
+- `#define EXTERNAL_LED_PIN 2` - Pin definition
+- `#define LED_ACTIVE_LOW false` - Set to `true` for ESP32-C3 Super Mini (onboard LED is active-low)
+- `LED_ON` / `LED_OFF` macros automatically handle inverted logic when `LED_ACTIVE_LOW` is enabled
 
 **No code changes needed** - just wire it up and upload!
+
+### ESP32-C3 Super Mini Users
+
+If you are using an **ESP32-C3 Super Mini**, the onboard LED uses active-low logic (LOW = on, HIGH = off). Change this line in `ESP32Sterzo.ino`:
+```cpp
+#define LED_ACTIVE_LOW true  // Set to true for ESP32-C3 onboard LED
+```
 
 ## LED Status Meanings
 
@@ -53,7 +60,7 @@ The LED functionality is built into `ESP32Sterzo.ino`:
 
 | Flash Pattern | Meaning | Fix |
 |---------------|---------|-----|
-| 3 fast flashes, pause, repeat | Sensor not found | Check I2C wiring (SDA→GPIO21, SCL→GPIO22) |
+| 3 fast flashes, pause, repeat | Sensor not found | Check I2C wiring (SDA→GPIO21, SCL→GPIO20) |
 | 4 fast flashes, pause, repeat | Magnet not detected | Check magnet placement over sensor |
 
 **Error flash timing:** 100ms on, 100ms off for each flash, then 1.5 second pause before repeating.
@@ -91,7 +98,7 @@ The LED functionality is built into `ESP32Sterzo.ino`:
 
 Don't like GPIO 2? You can use these instead:
 
-**Safe alternatives:** GPIO 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 23, 25, 26, 27, 32, 33
+**Safe alternatives:** GPIO 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 25, 26, 27, 32, 33
 
 **Change in code:**
 Edit line 22 in `ESP32Sterzo.ino`:
@@ -99,7 +106,7 @@ Edit line 22 in `ESP32Sterzo.ino`:
 #define EXTERNAL_LED_PIN 2  // Change to your desired pin
 ```
 
-**Don't use:** GPIO 21, 22 (I2C), GPIO 0, 1, 3 (boot/serial)
+**Don't use:** GPIO 20, 21 (I2C), GPIO 0, 1, 3 (boot/serial)
 
 ## Resistor Value Guide
 

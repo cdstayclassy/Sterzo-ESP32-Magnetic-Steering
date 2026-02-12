@@ -12,7 +12,7 @@ Ready-to-print STL files are included with default settings optimized for 608 sk
 | `Steering Controller Door.stl` | Removable bottom cover for ESP32 access | 1 |
 | `Steering Controller Rotating Top.stl` | Wheel cradle with bearing mounts and magnet holder | 1 |
 | `Steering Controller Bearing Rod.stl` | Retention rods that secure bearings in place | 4 |
-| `Steering Controller PETG Feet.stl` | Grip feet with textured bottom (print in TPU/PETG) | 4 |
+| `Steering Controller Rubber Foot.stl` | Single grip foot with textured bottom (print in TPU, one at a time) | 4 |
 | `Fit Test - AS5600 Sensor.stl` | Test piece to verify sensor pocket fit | 1 |
 | `Fit Test - 608 Bearing.stl` | Test piece to verify bearing pocket and rod fit | 1 |
 
@@ -31,7 +31,7 @@ The model generates several printable parts controlled by the `render_part` para
 | 4 | Bearing Rod | Small rods that secure bearings in place |
 | 5 | AS5600 Fit Test | Small test piece to verify sensor pocket and peg fit |
 | 6 | Bearing Fit Test | Small test piece to verify bearing pocket and rod fit |
-| 7 | Rubber Feet | Printable grip feet with textured bottom (print in TPU) |
+| 7 | Rubber Foot | Single printable grip foot with textured bottom (print in TPU, one at a time) |
 
 ## How It Works
 
@@ -64,8 +64,10 @@ The model generates several printable parts controlled by the `render_part` para
 ### Rotating Top
 - `top_height` - Total height of the rotating section (default: 62mm)
 - `top_wall_thickness` - Thickness of the wheel cradle walls (default: 18mm)
-- `wheel1_width` / `wheel1_depth` - Primary wheel slot dimensions (default: 30mm / 30mm)
-- `wheel2_width` / `wheel2_depth` - Secondary wheel slot dimensions (default: 50mm / 30mm)
+- `wheel1_width` - Primary wheel slot width (default: 30mm)
+- `wheel1_depth_front` / `wheel1_depth_back` - Front and back slot depths (default: 30mm each)
+- `wheel2_width` - Secondary wheel slot width (default: 50mm)
+- `wheel2_depth_left` / `wheel2_depth_right` - Left and right slot depths (default: 30mm each)
 - `wheel2_enabled` - Enable perpendicular wheel slots for different wheel sizes
 
 ### Bearings
@@ -106,7 +108,25 @@ The AS5600 magnetic rotation sensor works best with a 2-3mm air gap between the 
 - `rubber_foot_height` - Height of printable feet (for TPU printing)
 - `usb_enabled` - USB-C cable passthrough hole
 - `led_enabled` - Status LED hole with stepped diameter
-- `tilt_enabled` - Angle the base to compensate for bike headset angle
+
+### Compensating for Bike Head Tube Angle
+
+If your bike's head tube angle causes the wheel to contact one side of the cradle lower than the other (uneven pressure on front vs back cutouts), you can adjust the wheel slot depths independently:
+
+**For wheel position 1 (front/back cutouts):**
+- If the wheel contacts the **front** lower, increase `wheel1_depth_front`
+- If the wheel contacts the **back** lower, increase `wheel1_depth_back`
+
+**For wheel position 2 (left/right cutouts):**
+- Adjust `wheel2_depth_left` or `wheel2_depth_right` as needed
+
+**Example:** A road bike with a 73° head tube angle might need 3-5mm extra depth on the front cutout:
+```
+wheel1_depth_front = 33;  // 3mm deeper than default
+wheel1_depth_back = 30;   // normal
+```
+
+This allows the wheel to sit evenly in the cradle without tilting the entire base.
 
 ## Fit Testing (Recommended)
 
@@ -132,7 +152,7 @@ This saves significant time and filament compared to reprinting the full base or
 - **Door**: Print flat, countersunk screw holes face up
 - **Top**: Print right-side up (bottom on bed). The center recess ceiling (~61mm ring with center hole) may need supports or can bridge on most printers. This is easier than printing upside down, which would require supporting the entire solid floor section.
 - **Bearing Rod**: Print standing vertically for strength
-- **Rubber Feet**: Print in TPU/flexible filament for best grip. Already oriented with textured surface on top (becomes the grip surface when installed). The textured nubs provide traction on smooth surfaces.
+- **Rubber Foot**: Print in TPU/flexible filament for best grip. Print one at a time to reduce stringing. Already oriented with textured surface on top (becomes the grip surface when installed). The textured nubs provide traction on smooth surfaces. Print 4 copies.
 
 Recommended settings:
 - Layer height: 0.2mm

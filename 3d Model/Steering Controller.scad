@@ -131,12 +131,12 @@ button_center_height = 8;
 button_angle = 90;
 
 /* [Angled Base] */
-// Enable angled/tilted base (for bike headset angle compensation)
+// Enable angled base (tilts top surface to compensate for bike head tube angle)
 tilt_enabled = false;
-// Tilt percentage (grade: 10 = 10% grade = ~5.7 degrees, typical bike is 5-15%)
-tilt_percent = 0;
+// Tilt angle in degrees (typical bike head tube angle offset: 5-20°)
+tilt_angle_degrees = 0; // [0:1:25]
 // Tilt direction (degrees: 0 = back edge high, 90 = right edge high, 180 = front edge high)
-tilt_direction = 0;
+tilt_direction = 0; // [0:15:345]
 
 /* [Rotating Top - Main] */
 // Top total height
@@ -150,16 +150,21 @@ top_recess_clearance = 1;
 /* [Rotating Top - Wheel 1 (Front/Back)] */
 // Wheel 1 slot width (tire width + clearance)
 wheel1_width = 30;
-// Wheel 1 slot depth (how far DOWN from top the cutout extends)
-wheel1_depth = 30;
+// Wheel 1 FRONT slot depth (how far DOWN from top the cutout extends)
+// Increase this if wheel contacts front lower due to bike head tube angle
+wheel1_depth_front = 30;
+// Wheel 1 BACK slot depth (how far DOWN from top the cutout extends)
+wheel1_depth_back = 30;
 
 /* [Rotating Top - Wheel 2 (Left/Right)] */
 // Enable second wheel position (for different wheel sizes)
 wheel2_enabled = true;
 // Wheel 2 slot width (tire width + clearance)
 wheel2_width = 50;
-// Wheel 2 slot depth (how far DOWN from top the cutout extends)
-wheel2_depth = 30;
+// Wheel 2 LEFT slot depth (how far DOWN from top the cutout extends)
+wheel2_depth_left = 30;
+// Wheel 2 RIGHT slot depth (how far DOWN from top the cutout extends)
+wheel2_depth_right = 30;
 
 /* [Rotating Top - Magnet] */
 // Magnet diameter
@@ -241,13 +246,28 @@ top_recess_depth = center_height + magnet_air_gap;
 // Magnet position: bottom of magnet should be (center_height + magnet_air_gap) above base top
 magnet_pocket_z = center_height + magnet_air_gap;
 
-// Calculate tilt angle from percentage
-tilt_angle = atan(tilt_percent / 100);
+// Tilt angle (converted for calculations)
+tilt_angle = tilt_angle_degrees;
+// Height rise at back edge due to tilt
+tilt_rise = (base_diameter / 2) * tan(tilt_angle);
+// Echo tilt info if enabled
+if (tilt_enabled && tilt_angle > 0) {
+    echo(str("TILT: angle=", tilt_angle, "°, rise at back edge=", tilt_rise, "mm"));
+}
 
 // ==================== MODULES ====================
 
 // Main module
 module base_enclosure() {
+    if (tilt_enabled && tilt_angle > 0) {
+        base_enclosure_tilted();
+    } else {
+        base_enclosure_flat();
+    }
+}
+
+// Flat base enclosure (original design)
+module base_enclosure_flat() {
     difference() {
         // Solid parts
         union() {
@@ -306,6 +326,166 @@ module base_enclosure() {
         // Button/reset hole
         if (button_enabled) {
             button_hole_cutout();
+        }
+    }
+}
+
+// Tilted base enclosure - flat bottom with angled top surface
+module base_enclosure_tilted() {
+    difference() {
+        union() {
+            // === LOWER SECTION (flat) ===
+            // Main base cylinder - flat from Z=0 to base_height
+            cylinder(d = base_diameter, h = base_height);
+
+            // ESP32 door mounting posts (in the flat section)
+            if (esp32_enabled) {
+                translate([0, esp32_offset_y, 0])
+                    esp32_mounting_posts();
+            }
+
+            // === UPPER SECTION (angled) ===
+            // Combined tilted wedge and center post as one unified piece
+            tilted_upper_section();
+        }
+
+        // === LOWER SECTION CUTOUTS (flat) ===
+        // ESP32 pocket (from bottom)
+        if (esp32_enabled) {
+            translate([0, esp32_offset_y, -0.01])
+                esp32_pocket();
+            // Screw holes for door mounting
+            translate([0, esp32_offset_y, 0])
+                esp32_screw_holes();
+        }
+
+        // Rubber feet recesses
+        if (rubber_feet_enabled) {
+            rubber_feet_cutouts();
+        }
+
+        // USB-C hole
+        if (usb_enabled) {
+            usb_hole_cutout();
+        }
+
+        // LED hole
+        if (led_enabled) {
+            led_hole_cutout();
+        }
+
+        // Button/reset hole
+        if (button_enabled) {
+            button_hole_cutout();
+        }
+
+        // Vertical wire pass-through in flat section only (Z = 0 to base_height)
+        // Full size for AS5600 wiring - tilted_as5600_through_hole handles upper section with peg protection
+        translate([-as5600_opening_width/2, -as5600_opening_depth/2, -0.01])
+            cube([as5600_opening_width, as5600_opening_depth, base_height + 0.02]);
+
+        // === UPPER SECTION CUTOUTS (tilted) ===
+        // AS5600 sensor pocket (perpendicular to tilted surface)
+        tilted_as5600_cutouts();
+    }
+}
+
+// Combined tilted upper section - wedge and center post as unified geometry
+// Creates seamless connection by building everything in tilted frame then trimming at Z=base_height
+// Pivots around the front edge (Y = -base_diameter/2) at Z = base_height so edges stay aligned
+module tilted_upper_section() {
+    intersection() {
+        // Trim everything below Z = base_height and outside base diameter
+        translate([0, 0, base_height])
+            cylinder(d = base_diameter, h = center_height + tilt_rise + 10);
+
+        // All tilted geometry - pivot around front edge at (0, -base_diameter/2, base_height)
+        rotate([0, 0, tilt_direction])
+        translate([0, -base_diameter/2, base_height])  // Move pivot point to origin
+        rotate([tilt_angle, 0, 0])                      // Rotate (positive = back goes up)
+        translate([0, base_diameter/2, 0])              // Move geometry back to center
+        union() {
+            // Outer wedge disk - extends down far enough to fill all gaps after trim
+            translate([0, 0, -base_diameter])
+                cylinder(d = base_diameter, h = base_diameter + 0.01);
+
+            // Center post cylinder - extends upward from tilted plane
+            cylinder(d = center_diameter, h = center_height);
+
+            // AS5600 mounting pegs
+            if (as5600_peg_enabled) {
+                tilted_as5600_mounting_pegs();
+            }
+        }
+    }
+}
+
+// AS5600 mounting pegs for tilted configuration
+module tilted_as5600_mounting_pegs() {
+    // Pocket floor is where the AS5600 board sits
+    pocket_floor = center_height - as5600_ledge_depth;
+
+    if (as5600_peg_height != 0) {
+        for (x = [-as5600_peg_spacing_x/2, as5600_peg_spacing_x/2]) {
+            for (y = [-as5600_peg_spacing_y/2, as5600_peg_spacing_y/2]) {
+                translate([x, y, pocket_floor])
+                    cylinder(d = as5600_peg_diameter, h = as5600_peg_height);
+            }
+        }
+    }
+}
+
+// AS5600 cutouts for tilted configuration (pocket and through-hole)
+// Uses same pivot point as tilted_upper_section for alignment
+module tilted_as5600_cutouts() {
+    rotate([0, 0, tilt_direction])
+    translate([0, -base_diameter/2, base_height])  // Move pivot point to origin
+    rotate([tilt_angle, 0, 0])                      // Rotate (positive = back goes up)
+    translate([0, base_diameter/2, 0])              // Move geometry back to center
+    union() {
+        // AS5600 sensor pocket (recessed ledge at top for board to sit on)
+        translate([0, 0, center_height - as5600_ledge_depth])
+            as5600_ledge();
+
+        // Open through-hole below AS5600 (for wires)
+        translate([0, 0, -0.01])
+            tilted_as5600_through_hole();
+    }
+}
+
+// Through-hole for tilted AS5600 - connects down through wedge to ESP32 pocket area
+module tilted_as5600_through_hole() {
+    pocket_floor = center_height - as5600_ledge_depth;
+    rib_width = 2;
+    // Extend far down in tilted coords to cut through wedge and connect with vertical pass-through
+    extend_down = base_diameter;
+    total_height = pocket_floor + extend_down;
+
+    difference() {
+        // Rectangular opening - extends down through wedge to connect with vertical pass-through
+        translate([-as5600_opening_width/2, -as5600_opening_depth/2, -extend_down])
+            cube([as5600_opening_width, as5600_opening_depth, total_height + 0.02]);
+
+        // Leave solid columns at peg locations with support ribs to walls
+        // Only in the center post area (Z >= 0), not in the wedge extension
+        if (as5600_peg_enabled) {
+            for (x = [-as5600_peg_spacing_x/2, as5600_peg_spacing_x/2]) {
+                for (y = [-as5600_peg_spacing_y/2, as5600_peg_spacing_y/2]) {
+                    // Column at peg location (only from Z=0 up to pocket_floor)
+                    translate([x, y, -0.01])
+                        cylinder(d = as5600_peg_diameter, h = pocket_floor + 0.02);
+
+                    // Support rib in X direction
+                    wall_x = (x > 0) ? as5600_opening_width/2 : -as5600_opening_width/2;
+                    translate([min(x, wall_x), y - rib_width/2, -0.01])
+                        cube([abs(wall_x - x), rib_width, pocket_floor + 0.02]);
+
+                    // Support rib in Y direction
+                    wall_y = (y > 0) ? as5600_opening_depth/2 : -as5600_opening_depth/2;
+                    translate([x - rib_width/2, min(y, wall_y), -0.01])
+                        cube([rib_width, abs(wall_y - y), pocket_floor + 0.02]);
+                }
+            }
         }
     }
 }
@@ -621,17 +801,21 @@ module rotating_top() {
             cylinder(d = recess_diameter, h = top_recess_depth + 0.01);
 
         // Wheel 1 channel cutouts (front and back - 0° and 180°)
-        for (angle = [0, 180]) {
-            rotate([0, 0, angle])
-                wheel_channel_cutout(base_section_height, wheel1_width, wheel1_depth);
-        }
+        // Front cutout (0°)
+        rotate([0, 0, 0])
+            wheel_channel_cutout(base_section_height, wheel1_width, wheel1_depth_front);
+        // Back cutout (180°)
+        rotate([0, 0, 180])
+            wheel_channel_cutout(base_section_height, wheel1_width, wheel1_depth_back);
 
         // Wheel 2 channel cutouts (left and right - 90° and 270°)
         if (wheel2_enabled) {
-            for (angle = [90, 270]) {
-                rotate([0, 0, angle])
-                    wheel_channel_cutout(base_section_height, wheel2_width, wheel2_depth);
-            }
+            // Left cutout (90°)
+            rotate([0, 0, 90])
+                wheel_channel_cutout(base_section_height, wheel2_width, wheel2_depth_left);
+            // Right cutout (270°)
+            rotate([0, 0, 270])
+                wheel_channel_cutout(base_section_height, wheel2_width, wheel2_depth_right);
         }
 
         // Magnet pocket (centered, opens from recess floor, positions magnet at correct air gap)
@@ -702,62 +886,9 @@ module bearing_pocket() {
         cube([rod_l, rod_d, rod_ledge_depth + 0.02]);
 }
 
-// Solid wedge to fill underneath the tilted base
-module tilt_wedge_fill() {
-    // Height at the back (high) edge
-    back_rise = base_diameter * sin(tilt_angle);
-
-    rotate([0, 0, tilt_direction])
-    difference() {
-        // Solid cylinder tall enough to reach the tilted base
-        cylinder(d = base_diameter, h = back_rise + 1);
-
-        // Cut with angled plane matching the tilt
-        translate([0, 0, back_rise / 2])
-            rotate([tilt_angle, 0, 0])
-                translate([0, 0, back_rise])
-                    cube([base_diameter + 10, base_diameter + 10, back_rise * 2], center = true);
-    }
-}
-
-// Render base enclosure with optional tilt
+// Render base enclosure
 module render_base() {
-    if (tilt_enabled && tilt_percent > 0) {
-        // Calculate how much the front edge drops when rotated
-        front_drop = (base_diameter / 2) * sin(tilt_angle);
-        back_rise = base_diameter * sin(tilt_angle);
-
-        difference() {
-            union() {
-                // Rotate around X axis and lift so front edge is at Z=0
-                translate([0, 0, front_drop])
-                    rotate([0, 0, tilt_direction])
-                        rotate([tilt_angle, 0, 0])
-                            rotate([0, 0, -tilt_direction])
-                                base_enclosure();
-
-                // Fill in the wedge underneath
-                tilt_wedge_fill();
-            }
-
-            // Cut everything below Z=0 (clean up any artifacts)
-            translate([0, 0, -500])
-                cube([1000, 1000, 1000], center = true);
-
-            // Cut ESP32 pocket from bottom (vertical cut from Z=0)
-            if (esp32_enabled) {
-                translate([0, esp32_offset_y, -0.01])
-                    esp32_pocket();
-            }
-
-            // Cut rubber feet from bottom (vertical cut from Z=0)
-            if (rubber_feet_enabled) {
-                rubber_feet_cutouts();
-            }
-        }
-    } else {
-        base_enclosure();
-    }
+    base_enclosure();
 }
 
 // Bearing rod - cylinder that goes through bearing and into cross slot
