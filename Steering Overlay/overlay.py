@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import asyncio
+import math
 import queue
 import struct
 import threading
@@ -171,12 +172,18 @@ def _serial_loop(port: str, baud: int):
 
 # ── Tkinter UI ────────────────────────────────────────────────────────────────
 
-BAR_W       = 260
-BAR_H       = 28
-BAR_TRACK_Y = BAR_H // 2
-ANGLE_MIN   = -40.0
-ANGLE_MAX   =  40.0
-DIAMOND_R   = 8
+ANGLE_MIN      = -40.0
+ANGLE_MAX      =  40.0
+
+# Arc (steering wheel) geometry
+ARC_W          = 260          # canvas width
+ARC_H          = 110          # canvas height
+ARC_CX         = ARC_W // 2  # arc pivot x (centre)
+ARC_CY         = ARC_H - 2   # arc pivot y (near bottom edge)
+ARC_R          = 85           # track radius
+ARC_NEEDLE_R   = 76           # needle tip radius (inside the track)
+ARC_HALF_SPAN  = 65           # visual degrees from centre to each end
+ARC_TRACK_W    = 6            # track stroke width
 
 BG          = "#1a1a1a"
 FG          = "#ffffff"
@@ -192,11 +199,18 @@ BTN_FG      = "#888888"
 BLE_LABEL   = "BLE  —  Bluetooth (testing only)"
 
 
-def _angle_to_x(angle: float) -> float:
-    frac = (angle - ANGLE_MIN) / (ANGLE_MAX - ANGLE_MIN)
-    frac = max(0.0, min(1.0, frac))
-    margin = DIAMOND_R + 4
-    return margin + frac * (BAR_W - 2 * margin)
+def _steering_to_angles(steering: float):
+    """Return (visual_deg, extent_deg) for a steering value in [-40, 40].
+
+    visual_deg  — angle of the needle in tkinter/math convention
+                  (0=east, counterclockwise; 90=top).
+    extent_deg  — signed arc extent for the fill arc starting at 90°
+                  (negative = clockwise = right turn).
+    """
+    clamped = max(ANGLE_MIN, min(ANGLE_MAX, steering))
+    visual_deg = 90.0 - (clamped / ANGLE_MAX) * ARC_HALF_SPAN
+    extent_deg = -(clamped / ANGLE_MAX) * ARC_HALF_SPAN
+    return visual_deg, extent_deg
 
 
 class OverlayApp:
@@ -220,7 +234,7 @@ class OverlayApp:
         root.attributes("-topmost", True)
         root.overrideredirect(True)
 
-        w, h = 300, 185
+        w, h = 300, 265
         sw = root.winfo_screenwidth()
         sh = root.winfo_screenheight()
         root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
@@ -252,12 +266,12 @@ class OverlayApp:
         close_btn.pack(side="right")
         close_btn.bind("<Button-1>", lambda _: self._on_close())
 
-        # Steering bar
+        # Steering arc
         self.canvas = tk.Canvas(
-            root, width=BAR_W, height=BAR_H, bg=BG, highlightthickness=0
+            root, width=ARC_W, height=ARC_H, bg=BG, highlightthickness=0
         )
         self.canvas.pack(padx=10, pady=(4, 0))
-        self._draw_bar()
+        self._draw_arc()
 
         # Angle readout
         self.angle_label = tk.Label(
@@ -296,12 +310,12 @@ class OverlayApp:
             command=self._on_mode_selected
         )
         self.mode_menu.config(
-            bg="#2a2a2a", fg="#aaaaaa", activebackground="#3a3a3a",
+            bg="#2a2a2a", fg="#dddddd", activebackground="#3a3a3a",
             activeforeground="white", highlightthickness=0,
             relief="flat", bd=0, font=("Segoe UI", 8), cursor="hand2"
         )
         self.mode_menu["menu"].config(
-            bg="#2a2a2a", fg="#aaaaaa",
+            bg="#2a2a2a", fg="#dddddd",
             activebackground="#3a3a3a", activeforeground="white",
             font=("Segoe UI", 8), bd=0
         )
@@ -355,46 +369,69 @@ class OverlayApp:
 
         # Reset display
         self.angle_label.config(text="—°")
-        self._move_diamond(0.0)
+        self._move_needle(0.0)
 
-    # ── Bar ───────────────────────────────────────────────────────────────────
+    # ── Arc (steering wheel) ──────────────────────────────────────────────────
 
-    def _draw_bar(self):
+    def _draw_arc(self):
         c = self.canvas
-        margin = DIAMOND_R + 4
+        bb = (ARC_CX - ARC_R, ARC_CY - ARC_R,
+              ARC_CX + ARC_R, ARC_CY + ARC_R)
 
-        c.create_line(margin, BAR_TRACK_Y, BAR_W - margin, BAR_TRACK_Y,
-                      fill=TRACK_COLOR, width=3)
-        mid_x = BAR_W // 2
-        c.create_line(mid_x, BAR_TRACK_Y - 5, mid_x, BAR_TRACK_Y + 5,
-                      fill=TRACK_COLOR, width=1)
-        c.create_text(margin, BAR_H - 2, text="-40°", fill="#666666",
-                      font=("Segoe UI", 7), anchor="sw")
-        c.create_text(mid_x, BAR_H - 2, text="0°", fill="#666666",
-                      font=("Segoe UI", 7), anchor="s")
-        c.create_text(BAR_W - margin, BAR_H - 2, text="+40°", fill="#666666",
-                      font=("Segoe UI", 7), anchor="se")
+        # Gray track arc spanning the full ±40° range
+        c.create_arc(*bb,
+                     start=90 - ARC_HALF_SPAN, extent=ARC_HALF_SPAN * 2,
+                     style=tk.ARC, outline=TRACK_COLOR, width=ARC_TRACK_W)
 
-        cx = _angle_to_x(0.0)
-        cy = BAR_TRACK_Y
-        self._diamond = c.create_polygon(
-            cx,             cy - DIAMOND_R,
-            cx + DIAMOND_R, cy,
-            cx,             cy + DIAMOND_R,
-            cx - DIAMOND_R, cy,
-            fill=INDICATOR, outline=FG, width=1
+        # Coloured fill arc — updated each frame, hidden at centre
+        self._fill_arc = c.create_arc(*bb,
+                                      start=90, extent=0.01,
+                                      style=tk.ARC, outline=INDICATOR,
+                                      width=ARC_TRACK_W, state="hidden")
+
+        # Centre tick (straight-ahead mark)
+        tick_in  = ARC_R - 8
+        tick_out = ARC_R + 8
+        c.create_line(ARC_CX, ARC_CY - tick_in,
+                      ARC_CX, ARC_CY - tick_out,
+                      fill=TRACK_COLOR, width=2)
+
+        # Outer labels: -40°, 0°, +40°
+        for deg, text, anchor in (
+            (90 - ARC_HALF_SPAN, "+40°", "w"),   # right end
+            (90,                 "0°",   "s"),   # top
+            (90 + ARC_HALF_SPAN, "-40°", "e"),   # left end
+        ):
+            rad = math.radians(deg)
+            lx = ARC_CX + (ARC_R + 12) * math.cos(rad)
+            ly = ARC_CY - (ARC_R + 12) * math.sin(rad)
+            c.create_text(lx, ly, text=text, fill="#555555",
+                          font=("Segoe UI", 7), anchor=anchor)
+
+        # Needle line (updated each frame)
+        self._needle = c.create_line(
+            ARC_CX, ARC_CY, ARC_CX, ARC_CY - ARC_NEEDLE_R,
+            fill=FG, width=2, capstyle=tk.ROUND
         )
 
-    def _move_diamond(self, angle: float):
-        cx = _angle_to_x(angle)
-        cy = BAR_TRACK_Y
-        self.canvas.coords(
-            self._diamond,
-            cx,             cy - DIAMOND_R,
-            cx + DIAMOND_R, cy,
-            cx,             cy + DIAMOND_R,
-            cx - DIAMOND_R, cy,
-        )
+        # Pivot dot at centre
+        r = 5
+        c.create_oval(ARC_CX - r, ARC_CY - r,
+                      ARC_CX + r, ARC_CY + r,
+                      fill=FG, outline="")
+
+    def _move_needle(self, angle: float):
+        visual_deg, extent_deg = _steering_to_angles(angle)
+        rad = math.radians(visual_deg)
+        nx = ARC_CX + ARC_NEEDLE_R * math.cos(rad)
+        ny = ARC_CY - ARC_NEEDLE_R * math.sin(rad)
+        self.canvas.coords(self._needle, ARC_CX, ARC_CY, nx, ny)
+
+        if abs(extent_deg) < 0.5:
+            self.canvas.itemconfig(self._fill_arc, state="hidden")
+        else:
+            self.canvas.itemconfig(self._fill_arc,
+                                   state="normal", extent=extent_deg)
 
     # ── Drag ─────────────────────────────────────────────────────────────────
 
@@ -426,9 +463,8 @@ class OverlayApp:
         self.root.after(50, self._poll)
 
     def _update_angle(self, angle: float):
-        clamped = max(ANGLE_MIN, min(ANGLE_MAX, angle))
         self.angle_label.config(text=f"{angle:+.1f}°")
-        self._move_diamond(clamped)
+        self._move_needle(angle)
 
     def _update_status(self, status: str):
         if status == "connected":
