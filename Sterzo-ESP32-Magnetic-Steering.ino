@@ -363,6 +363,7 @@ void setup() {
 }
 
 uint32_t bleNotifyMillis;
+uint32_t serialPrintMillis;
 uint32_t challengeMillis;
 uint32_t blinkMillis;
 uint32_t errorFlashMillis;
@@ -524,6 +525,13 @@ void loop() {
   // challengeOK remains false because zwift doesn't seem to send anything on char 31
   // so for workaround we start sending steering angles as soon as zwift connects, and strangely enough that works
   //if (deviceConnected && challengeOK) { 
+  // Always print angle to serial so the Python overlay can read it over USB
+  // regardless of whether a BLE client (GTBikeV) is connected
+  if (sensorReady && (millis() - serialPrintMillis > STEERING_UPDATE_MS)) {
+    Serial.print("ntf angle "); Serial.println(steeringAngle);
+    serialPrintMillis = millis();
+  }
+
   if (deviceConnected) {
     if (millis() - bleNotifyMillis > STEERING_UPDATE_MS) {
       bleNotifySteeringAngle ();
