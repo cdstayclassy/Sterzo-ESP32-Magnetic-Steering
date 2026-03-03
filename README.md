@@ -84,7 +84,7 @@ Install the following libraries through Arduino IDE Library Manager:
 ### Installation Steps
 
 1. Clone or download this repository
-2. Open `ESP32Sterzo.ino` in Arduino IDE
+2. Open `Sterzo-ESP32-Magnetic-Steering.ino` in Arduino IDE
 3. Install required libraries (see above)
 4. Select your ESP32 board from Tools > Board
 5. Select the correct COM port from Tools > Port
@@ -114,7 +114,7 @@ Install the following libraries through Arduino IDE Library Manager:
 
 ## Configuration
 
-All settings are located at the top of `ESP32Sterzo.ino` for easy customization:
+All settings are located at the top of `Sterzo-ESP32-Magnetic-Steering.ino` for easy customization:
 
 ```cpp
 // Pin definitions

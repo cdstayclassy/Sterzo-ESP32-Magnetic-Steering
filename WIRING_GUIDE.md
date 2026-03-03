@@ -184,7 +184,7 @@ GPIO 20 and GPIO 21 are reserved for I2C communication with the AS5600 sensor an
 
 ### ESP32-C3 Super Mini Note
 
-The ESP32-C3 Super Mini has an **active-low onboard LED** (LOW = on, HIGH = off). If you are using this board, change this line in `ESP32Sterzo.ino`:
+The ESP32-C3 Super Mini has an **active-low onboard LED** (LOW = on, HIGH = off). If you are using this board, change this line in `Sterzo-ESP32-Magnetic-Steering.ino`:
 ```cpp
 #define LED_ACTIVE_LOW true  // Set to true for ESP32-C3 onboard LED
 ```
@@ -196,19 +196,19 @@ If default pins are already in use, you can use these alternatives:
 - GPIO 5, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 25, 26, 27, 32, 33
 
 **To change LED pin:**
-Edit in `ESP32Sterzo.ino`:
+Edit in `Sterzo-ESP32-Magnetic-Steering.ino`:
 ```cpp
 #define EXTERNAL_LED_PIN 2  // Change to your desired GPIO number
 ```
 
 **To change button pin:**
-Edit in `ESP32Sterzo.ino`:
+Edit in `Sterzo-ESP32-Magnetic-Steering.ino`:
 ```cpp
 #define CENTER_BUTTON_PIN 4  // Change to your desired GPIO number
 ```
 
 **To change I2C pins:**
-Edit in `ESP32Sterzo.ino`:
+Edit in `Sterzo-ESP32-Magnetic-Steering.ino`:
 ```cpp
 #define I2C_SDA_PIN 21  // Change to your desired GPIO number
 #define I2C_SCL_PIN 20  // Change to your desired GPIO number
@@ -306,7 +306,7 @@ The 3mm LED fits into the 3.2mm hole in the front of the base:
 ## Next Steps
 
 After wiring is complete:
-1. Upload `ESP32Sterzo.ino` to ESP32
+1. Upload `Sterzo-ESP32-Magnetic-Steering.ino` to ESP32
 2. Open Serial Monitor at 115200 baud
 3. Verify sensor detection
 4. Test LED blinking

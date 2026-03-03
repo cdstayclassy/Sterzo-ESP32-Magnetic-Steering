@@ -46,6 +46,15 @@
                                     // 100 = 10 updates/sec (responsive)
                                     // 50 = 20 updates/sec (very responsive)
 
+// Noise filtering configuration
+#define SMOOTHING_ALPHA 0.25        // EMA smoothing factor (0.0-1.0)
+                                    // Lower = smoother but more lag (e.g. 0.1)
+                                    // Higher = more responsive but less filtering (e.g. 0.5)
+                                    // 0.25 is a good starting point for most setups
+#define SPIKE_REJECT_THRESHOLD 150  // Raw sensor units — readings that jump more than this
+                                    // from the smoothed value in one sample are discarded
+                                    // as noise spikes. 150 ≈ ~13° of physical rotation.
+
 #define STERZO_SERVICE_UUID "347b0001-7635-408b-8918-8ff3949ce592"
 //#define CHAR12_UUID         "347b0012-7635-408b-8918-8ff3949ce592" // not needed for Zwift
 //#define CHAR13_UUID         "347b0013-7635-408b-8918-8ff3949ce592" // not needed for Zwift
@@ -73,6 +82,8 @@ float steeringAngle = 0.0;
 AS5600 as5600;
 uint16_t centerPosition = 0;  // Center position calibration value
 bool sensorReady = false;
+float smoothedRawAngle = 0.0;  // EMA-filtered raw angle value
+bool smoothingInitialized = false;
 
 // Error codes for LED indication
 // 0 = No error
@@ -243,6 +254,8 @@ void setup() {
     // Read initial center position for calibration
     delay(100);
     centerPosition = as5600.rawAngle();
+    smoothedRawAngle = (float)centerPosition;  // Seed EMA at center to avoid startup jerk
+    smoothingInitialized = true;
     Serial.print("Center position set to: ");
     Serial.println(centerPosition);
 
@@ -421,6 +434,7 @@ void loop() {
 
       // Set current position as new center
       centerPosition = as5600.rawAngle();
+      smoothedRawAngle = (float)centerPosition;  // Reseed EMA so there's no offset drift after recenter
       Serial.print("Recentered! New center position: ");
       Serial.println(centerPosition);
 
@@ -440,26 +454,45 @@ void loop() {
   if (sensorReady) {
     uint16_t rawAngle = as5600.rawAngle();  // 0-4095 (12-bit)
 
-    // Calculate angle difference from center position
-    int16_t angleDiff = (int16_t)rawAngle - (int16_t)centerPosition;
+    if (!smoothingInitialized) {
+      // Seed the EMA with the first real reading so it doesn't start at 0
+      smoothedRawAngle = (float)rawAngle;
+      smoothingInitialized = true;
+    } else {
+      // Spike rejection: if this reading jumps too far from the smoothed value,
+      // it's almost certainly vibration noise — discard it and keep the last good value.
+      // We compare using shortest-path wraparound arithmetic.
+      float diff = (float)rawAngle - smoothedRawAngle;
+      if (diff > 2048.0f) diff -= 4096.0f;
+      if (diff < -2048.0f) diff += 4096.0f;
 
-    // Handle wraparound (e.g., if center is at 4000 and current is at 100)
-    if (angleDiff > 2048) {
-      angleDiff -= 4096;
-    } else if (angleDiff < -2048) {
-      angleDiff += 4096;
+      if (abs(diff) < SPIKE_REJECT_THRESHOLD) {
+        // Normal reading — apply EMA smoothing
+        smoothedRawAngle += SMOOTHING_ALPHA * diff;
+        // Keep smoothedRawAngle in [0, 4096) range
+        if (smoothedRawAngle < 0.0f) smoothedRawAngle += 4096.0f;
+        if (smoothedRawAngle >= 4096.0f) smoothedRawAngle -= 4096.0f;
+      }
+      // If spike detected, smoothedRawAngle is unchanged (sample discarded)
     }
 
+    // Calculate angle difference from center position using smoothed value
+    float angleDiff = smoothedRawAngle - (float)centerPosition;
+
+    // Handle wraparound (e.g., if center is at 4000 and smoothed is at 100)
+    if (angleDiff > 2048.0f) angleDiff -= 4096.0f;
+    if (angleDiff < -2048.0f) angleDiff += 4096.0f;
+
     // Map angle difference to steering range (-40 to +40 degrees)
-    float mappedAngle = (float)angleDiff / STEERING_SENSITIVITY * 40.0;
+    float mappedAngle = angleDiff / STEERING_SENSITIVITY * 40.0f;
 
     // Limit to Zwift steering range
-    if (mappedAngle > 40.0) mappedAngle = 40.0;
-    if (mappedAngle < -40.0) mappedAngle = -40.0;
+    if (mappedAngle > 40.0f) mappedAngle = 40.0f;
+    if (mappedAngle < -40.0f) mappedAngle = -40.0f;
 
     // Apply dead zone - angles within ±STEERING_DEAD_ZONE are treated as straight
     if (mappedAngle > -STEERING_DEAD_ZONE && mappedAngle < STEERING_DEAD_ZONE) {
-      mappedAngle = 0.0;
+      mappedAngle = 0.0f;
     }
 
     steeringAngle = mappedAngle;
