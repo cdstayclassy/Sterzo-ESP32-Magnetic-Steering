@@ -121,6 +121,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
       Serial.println("a device connected!");
+      // Restart advertising so additional clients (e.g. the Python overlay) can also connect
+      BLEDevice::startAdvertising();
     };
 
     void onDisconnect(BLEServer* pServer) {

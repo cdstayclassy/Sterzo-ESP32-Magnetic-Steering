@@ -1,17 +1,23 @@
 """
-Steering Overlay — live BLE steering angle display for GTBikeV.
+Steering Overlay — live steering angle display for GTBikeV.
 
-Connects to the ESP32 Sterzo device, subscribes to CHAR30 steering
-notifications, and shows a floating always-on-top window with a
-steering bar and numeric angle readout.
+Modes:
+    BLE    (default) — connects directly to ESP32 over Bluetooth
+    Serial           — reads angle from ESP32 over USB serial cable
 
-No auth handshake required (firmware gate is commented out).
+Usage:
+    python overlay.py                                 # BLE mode
+    python overlay.py --mode serial                   # USB serial, auto-detect port
+    python overlay.py --mode serial --port /dev/cu.usbserial-0001
+    python overlay.py --list-ports                    # list available serial ports
 """
 
+import argparse
 import asyncio
 import queue
 import struct
 import threading
+import time
 import tkinter as tk
 
 from bleak import BleakClient, BleakScanner
@@ -26,6 +32,7 @@ RECONNECT_DELAY = 3   # seconds between reconnect attempts
 # ── Shared state between threads ─────────────────────────────────────────────
 angle_queue: queue.Queue = queue.Queue(maxsize=10)
 stop_event   = threading.Event()
+
 
 # ── BLE background thread ─────────────────────────────────────────────────────
 
@@ -89,6 +96,78 @@ async def _scan():
         return None
 
 
+# ── USB Serial background thread ──────────────────────────────────────────────
+
+def _detect_serial_port():
+    """Return the most likely ESP32 serial port, or None if not found."""
+    try:
+        import serial.tools.list_ports
+    except ImportError:
+        return None
+
+    ESP32_KEYWORDS = (
+        "cp210", "ch340", "ch341", "ftdi",
+        "uart", "usb serial", "usb-serial",
+        "jtag",          # ESP32-S3/C3 built-in USB ("USB JTAG/serial debug unit")
+    )
+    ports = list(serial.tools.list_ports.comports())
+
+    # Prefer ports whose description/manufacturer matches known ESP32 USB chips,
+    # or whose device path looks like a USB modem (ESP32 built-in USB on macOS)
+    for p in ports:
+        desc   = (p.description or "").lower()
+        mfr    = (p.manufacturer or "").lower()
+        device = (p.device or "").lower()
+        if any(k in desc or k in mfr for k in ESP32_KEYWORDS):
+            return p.device
+        if "usbmodem" in device:
+            return p.device
+
+    # Skip debug-console and Bluetooth pseudo-ports; take the first real port
+    skip = ("debug-console", "bluetooth")
+    real = [p for p in ports if not any(s in p.device.lower() for s in skip)]
+    return real[0].device if real else None
+
+
+def serial_thread(port, baud):
+    """Read 'ntf angle X.XX' lines from the ESP32 serial port."""
+    import serial as pyserial
+
+    while not stop_event.is_set():
+        resolved_port = port or _detect_serial_port()
+        if resolved_port is None:
+            angle_queue.put(("status", "scanning"))
+            time.sleep(RECONNECT_DELAY)
+            continue
+
+        angle_queue.put(("status", "connecting"))
+        try:
+            with pyserial.Serial(resolved_port, baud, timeout=1) as ser:
+                angle_queue.put(("status", "connected"))
+                while not stop_event.is_set():
+                    try:
+                        line = ser.readline().decode("utf-8", errors="ignore").strip()
+                    except Exception:
+                        break
+                    if line.startswith("ntf angle "):
+                        try:
+                            angle = float(line[len("ntf angle "):])
+                            if angle_queue.full():
+                                try:
+                                    angle_queue.get_nowait()
+                                except queue.Empty:
+                                    pass
+                            angle_queue.put(("angle", angle))
+                        except ValueError:
+                            pass
+        except Exception:
+            pass  # port not available or disconnected
+
+        if not stop_event.is_set():
+            angle_queue.put(("status", "disconnected"))
+            time.sleep(RECONNECT_DELAY)
+
+
 # ── Tkinter UI ────────────────────────────────────────────────────────────────
 
 BAR_W        = 260   # canvas width
@@ -105,6 +184,8 @@ INDICATOR    = "#00aaff"
 GREEN        = "#00cc44"
 YELLOW       = "#ffcc00"
 RED          = "#ff4444"
+BADGE_BLE    = "#1a4a6e"
+BADGE_USB    = "#3a2a6e"
 
 
 def _angle_to_x(angle: float) -> float:
@@ -116,8 +197,9 @@ def _angle_to_x(angle: float) -> float:
 
 
 class OverlayApp:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, mode: str):
         self.root = root
+        self.mode = mode  # "ble" or "serial"
         self._build_window()
         self._build_widgets()
         self._drag_x = 0
@@ -145,7 +227,7 @@ class OverlayApp:
 
     def _build_widgets(self):
         root = self.root
-        # Title row with close button
+        # Title row with mode badge and close button
         title_frame = tk.Frame(root, bg=BG)
         title_frame.pack(fill="x", padx=8, pady=(6, 0))
 
@@ -153,6 +235,13 @@ class OverlayApp:
             title_frame, text="Steering Angle", bg=BG, fg="#aaaaaa",
             font=("Segoe UI", 9)
         ).pack(side="left")
+
+        badge_text = "BLE" if self.mode == "ble" else "USB"
+        badge_bg   = BADGE_BLE if self.mode == "ble" else BADGE_USB
+        tk.Label(
+            title_frame, text=badge_text, bg=badge_bg, fg="#aaaaaa",
+            font=("Segoe UI", 7), padx=4, pady=1
+        ).pack(side="left", padx=(6, 0))
 
         close_btn = tk.Label(
             title_frame, text="✕", bg=BG, fg="#666666",
@@ -295,12 +384,53 @@ class OverlayApp:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def _list_ports():
+    try:
+        import serial.tools.list_ports
+        ports = list(serial.tools.list_ports.comports())
+        if not ports:
+            print("No serial ports found.")
+        for p in ports:
+            print(f"  {p.device:<30} {p.description}")
+    except ImportError:
+        print("pyserial not installed. Run: pip install pyserial")
+
+
 def main():
-    t = threading.Thread(target=ble_thread, daemon=True)
+    parser = argparse.ArgumentParser(description="Steering angle overlay for GTBikeV")
+    parser.add_argument(
+        "--mode", choices=["ble", "serial"], default="ble",
+        help="Connection mode: 'ble' (default) or 'serial' (USB cable)"
+    )
+    parser.add_argument(
+        "--port", default=None,
+        help="Serial port to use (serial mode only). Auto-detected if omitted."
+    )
+    parser.add_argument(
+        "--baud", type=int, default=115200,
+        help="Serial baud rate (default: 115200)"
+    )
+    parser.add_argument(
+        "--list-ports", action="store_true",
+        help="List available serial ports and exit"
+    )
+    args = parser.parse_args()
+
+    if args.list_ports:
+        _list_ports()
+        return
+
+    if args.mode == "serial":
+        t = threading.Thread(
+            target=serial_thread, args=(args.port, args.baud), daemon=True
+        )
+    else:
+        t = threading.Thread(target=ble_thread, daemon=True)
+
     t.start()
 
     root = tk.Tk()
-    app = OverlayApp(root)
+    app = OverlayApp(root, mode=args.mode)
     root.protocol("WM_DELETE_WINDOW", app._on_close)
     root.mainloop()
 
