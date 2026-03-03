@@ -13,6 +13,7 @@ A DIY bike trainer for apps such as Zwift or GTBikeV, similar to the Sterzo stee
 - Adjustable sensitivity and update rate
 - LED status indicator with error codes for easy troubleshooting
 - All settings easily configurable at top of code file
+- **Steering Overlay** — floating Python app showing live angle via BLE or USB serial
 
 ## Hardware Required
 
@@ -100,6 +101,87 @@ Install the following libraries through Arduino IDE Library Manager:
    - Pair the device
 3. **Steering**: Rotate your handlebars left/right to steer in Zwift
 4. **Recentering** (if button installed): If the base gets bumped during a ride, center your handlebars and press the recenter button. LED will flash twice to confirm.
+
+## Steering Overlay
+
+The `Steering Overlay/` folder contains a Python app that shows a floating, always-on-top window with a live steering arc indicator while you ride. It supports two connection modes:
+
+| Mode | When to use |
+|------|-------------|
+| **BLE** | Standalone testing — connects directly to the ESP32 over Bluetooth |
+| **USB Serial** | In-game with GTBikeV — reads angle over USB cable, leaving BLE free for the game |
+
+### Prerequisites
+
+- Python 3.9+
+- Install dependencies:
+
+```bash
+pip install bleak pyserial
+```
+
+### Running
+
+```bash
+python3 "Steering Overlay/overlay.py"
+```
+
+The overlay opens immediately. Use the **Via:** dropdown to choose your connection:
+
+- **BLE — Bluetooth (testing only)** — scans for the ESP32 by name/UUID and connects
+- **`/dev/cu.usbmodem…` — USB JTAG/serial debug unit** (or similar) — reads angle from the USB serial port
+
+Hit **↺** to refresh the port list if you plug in after launching.
+
+### UI Walkthrough
+
+```
+┌─ Steering Angle  [BLE]              ✕ ─┐
+│                                         │
+│          -40°    0°    +40°             │
+│            ╲     |     ╱               │
+│             ╲    │    ╱                │
+│              ────●────                  │
+│                                         │
+│              +12.4°                     │
+│                                         │
+│  ● Connected                            │
+│  Via: [BLE — Bluetooth (testing only) ▾]│
+└─────────────────────────────────────────┘
+```
+
+| Element | Description |
+|---------|-------------|
+| **Arc track** | Gray arc spanning the full ±40° steering range |
+| **Blue fill arc** | Grows from centre toward the current angle |
+| **Needle** | White line from pivot to arc edge showing exact angle |
+| **Angle readout** | Large numeric display (e.g. `+12.4°`) |
+| **Status dot** | Green = connected, Yellow = scanning/connecting, Red = disconnected |
+| **Via: dropdown** | Choose BLE or a USB serial port; switches live without restarting |
+| **↺ button** | Rescans available serial ports |
+| **✕ button** | Closes the overlay |
+
+The window is **draggable** — click and drag anywhere to reposition it.
+
+### Always-on-top & full-screen caveat (macOS)
+
+The overlay uses `topmost` mode, which keeps it above normal windows. However, macOS full-screen apps run in their own Space, so the overlay will **not** appear on top of GTBikeV if it is in full-screen mode. Use GTBikeV in **windowed** mode, or resize it to leave a small area where the overlay can sit.
+
+### Auto-reconnect
+
+Both modes reconnect automatically if the connection is lost:
+- **BLE**: re-scans every 3 seconds until the ESP32 is found again
+- **USB Serial**: re-opens the port every 3 seconds until the device reappears
+
+Switching the **Via:** dropdown triggers an immediate reconnect in the new mode.
+
+### USB Serial — ESP32 board setting
+
+The USB serial mode requires `Serial.print()` output to be routed through the USB port. On **ESP32-S3 and ESP32-C3** boards with built-in USB (no separate USB-UART chip), you must enable this in Arduino IDE before flashing:
+
+> **Tools → USB CDC On Boot → Enabled**
+
+Without this, `Serial` output goes to the hardware UART0 pins instead of the USB port and the overlay will not receive data. ESP32 boards with a separate USB-UART chip (CP2102, CH340, FTDI) do not need this change.
 
 ## LED Status
 
